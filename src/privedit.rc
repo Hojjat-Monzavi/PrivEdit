@@ -1,0 +1,162 @@
+// privedit.rc -- resources for the PrivEdit GUI editor.
+//
+// Includes:
+//   * Main menu (File / Edit / Format / View / Privacy / Help)
+//   * Accelerator table
+//   * Password dialog (also used for Confirm-password mode)
+//   * Cover-text dialog
+//   * Generic single-line input dialog (Find)
+//   * About dialog
+//   * Application manifest (Common Controls v6, DPI-aware, asInvoker)
+//
+// The View menu now contains both "Status Bar" and "Night Theme".
+
+#include <windows.h>
+#include "resource.h"
+
+// ===========================================================================
+//  Main menu
+// ===========================================================================
+IDR_MAINMENU MENU
+BEGIN
+    POPUP "&File"
+    BEGIN
+        MENUITEM "&New\tCtrl+N",        ID_FILE_NEW
+        MENUITEM "&Open...\tCtrl+O",    ID_FILE_OPEN
+        MENUITEM "&Save\tCtrl+S",       ID_FILE_SAVE
+        MENUITEM "Save &As...",         ID_FILE_SAVEAS
+        MENUITEM SEPARATOR
+        MENUITEM "E&xit",               ID_FILE_EXIT
+    END
+
+    POPUP "&Edit"
+    BEGIN
+        MENUITEM "&Undo\tCtrl+Z",       ID_EDIT_UNDO
+        MENUITEM SEPARATOR
+        MENUITEM "Cu&t\tCtrl+X",        ID_EDIT_CUT
+        MENUITEM "&Copy\tCtrl+C",       ID_EDIT_COPY
+        MENUITEM "&Paste\tCtrl+V",      ID_EDIT_PASTE
+        MENUITEM "De&lete\tDel",        ID_EDIT_DELETE
+        MENUITEM SEPARATOR
+        MENUITEM "&Find...\tCtrl+F",    ID_EDIT_FIND
+        MENUITEM "Find &Next\tF3",      ID_EDIT_FINDNEXT
+        MENUITEM SEPARATOR
+        MENUITEM "Select &All\tCtrl+A", ID_EDIT_SELECTALL
+        MENUITEM "Time/&Date\tF5",      ID_EDIT_TIMEDATE
+    END
+
+    POPUP "F&ormat"
+    BEGIN
+        MENUITEM "&Word Wrap",          ID_FORMAT_WORDWRAP
+        MENUITEM "&Font...",            ID_FORMAT_FONT
+    END
+
+    POPUP "&View"
+    BEGIN
+        MENUITEM "&Status Bar",         ID_VIEW_STATUSBAR
+        MENUITEM "&Night Theme",        ID_VIEW_NIGHTTHEME
+    END
+
+    POPUP "&Privacy"
+    BEGIN
+        MENUITEM "&Reveal Real Text\tCtrl+R", ID_PRIV_REVEAL
+        MENUITEM SEPARATOR
+        MENUITEM "Set &Cover Text...",  ID_PRIV_SETCOVER
+        MENUITEM "Change Pass&word...", ID_PRIV_CHANGEPW
+        MENUITEM SEPARATOR
+        MENUITEM "&Lock Now\tCtrl+L",   ID_PRIV_LOCK
+    END
+
+    POPUP "&Help"
+    BEGIN
+        MENUITEM "&About PrivEdit",     ID_HELP_ABOUT
+    END
+END
+
+// ===========================================================================
+//  Accelerators
+// ===========================================================================
+IDR_MAINACCEL ACCELERATORS
+BEGIN
+    "N",  ID_FILE_NEW,        VIRTKEY, CONTROL
+    "O",  ID_FILE_OPEN,       VIRTKEY, CONTROL
+    "S",  ID_FILE_SAVE,       VIRTKEY, CONTROL
+    "Z",  ID_EDIT_UNDO,       VIRTKEY, CONTROL
+    "X",  ID_EDIT_CUT,        VIRTKEY, CONTROL
+    "C",  ID_EDIT_COPY,       VIRTKEY, CONTROL
+    "V",  ID_EDIT_PASTE,      VIRTKEY, CONTROL
+    "A",  ID_EDIT_SELECTALL,  VIRTKEY, CONTROL
+    "F",  ID_EDIT_FIND,       VIRTKEY, CONTROL
+    "R",  ID_PRIV_REVEAL,     VIRTKEY, CONTROL
+    "L",  ID_PRIV_LOCK,       VIRTKEY, CONTROL
+    VK_F3, ID_EDIT_FINDNEXT,  VIRTKEY
+    VK_F5, ID_EDIT_TIMEDATE,  VIRTKEY
+END
+
+// ===========================================================================
+//  Password dialog
+//  Used both for "enter password" and "set + confirm password" modes.
+//  In confirm mode, IDC_CONFIRM_LABEL and IDC_CONFIRM are shown.
+// ===========================================================================
+IDD_PASSWORD DIALOGEX 0, 0, 250, 130
+STYLE DS_SETFONT | DS_MODALFRAME | DS_FIXEDSYS | WS_POPUP | WS_CAPTION | WS_SYSMENU
+CAPTION "PrivEdit"
+FONT 8, "MS Shell Dlg", 400, 0, 0x1
+BEGIN
+    LTEXT         "",                   IDC_PROMPT,        10,  10, 230,  22
+    EDITTEXT      IDC_PASSWORD,          10,  36, 230,  14, ES_PASSWORD | ES_AUTOHSCROLL
+    LTEXT         "Confirm password:",  IDC_CONFIRM_LABEL, 10,  56, 230,  10
+    EDITTEXT      IDC_CONFIRM,           10,  68, 230,  14, ES_PASSWORD | ES_AUTOHSCROLL
+    DEFPUSHBUTTON "OK",                 IDOK,             135, 105,  50,  14
+    PUSHBUTTON    "Cancel",             IDCANCEL,         190, 105,  50,  14
+END
+
+// ===========================================================================
+//  Cover-text dialog
+//  Multi-line editor; the current cover (UTF-8) is pre-loaded as wide text.
+// ===========================================================================
+IDD_COVER DIALOGEX 0, 0, 340, 220
+STYLE DS_SETFONT | DS_MODALFRAME | WS_POPUP | WS_CAPTION | WS_SYSMENU
+CAPTION "Cover Text"
+FONT 8, "MS Shell Dlg", 400, 0, 0x1
+BEGIN
+    EDITTEXT      IDC_COVER_TEXT,  5,   5, 330, 185,
+                  ES_MULTILINE | ES_WANTRETURN | WS_VSCROLL | ES_AUTOVSCROLL | ES_AUTOHSCROLL
+    DEFPUSHBUTTON "OK",           IDOK,     230, 195,  50,  14
+    PUSHBUTTON    "Cancel",       IDCANCEL, 285, 195,  50,  14
+END
+
+// ===========================================================================
+//  Generic single-line input dialog (currently used by Find)
+// ===========================================================================
+IDD_INPUT DIALOGEX 0, 0, 250, 80
+STYLE DS_SETFONT | DS_MODALFRAME | DS_FIXEDSYS | WS_POPUP | WS_CAPTION | WS_SYSMENU
+CAPTION "PrivEdit"
+FONT 8, "MS Shell Dlg", 400, 0, 0x1
+BEGIN
+    LTEXT         "",            IDC_PROMPT,     10, 10, 230, 20
+    EDITTEXT      IDC_INPUT_TEXT, 10, 35, 230, 14, ES_AUTOHSCROLL
+    DEFPUSHBUTTON "OK",          IDOK,          135, 55,  50, 14
+    PUSHBUTTON    "Cancel",      IDCANCEL,      190, 55,  50, 14
+END
+
+// ===========================================================================
+//  About dialog
+// ===========================================================================
+IDD_ABOUT DIALOGEX 0, 0, 260, 130
+STYLE DS_SETFONT | DS_MODALFRAME | WS_POPUP | WS_CAPTION | WS_SYSMENU
+CAPTION "About PrivEdit"
+FONT 8, "MS Shell Dlg", 400, 0, 0x1
+BEGIN
+    LTEXT "PrivEdit 1.0\n\nPrivacy-first text editor.\nSelf-contained notes are their own editor.\n\nAES-256-CBC + HMAC-SHA256 (encrypt-then-MAC).\nKey derivation: scrypt (N=2^17, r=8, p=1) - PENC v2,\nPBKDF2-HMAC-SHA256 600 000 iterations - PENC v1 (legacy).",
+          IDC_ABOUT_TEXT, 10, 10, 240, 105
+    DEFPUSHBUTTON "OK", IDOK, 105, 115, 50, 14
+END
+
+// ===========================================================================
+//  Application manifest
+//  Requested: Common Controls v6, DPI aware, asInvoker, long-path aware.
+//  The file lives next to this .rc (src/privedit.manifest) and is pulled in
+//  by windres / CMake's RC language support with -I${CMAKE_CURRENT_SOURCE_DIR}/src.
+// ===========================================================================
+1 RT_MANIFEST "privedit.manifest"
