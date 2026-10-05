@@ -2,8 +2,8 @@
 
 > Privacy-first Windows text editor. Each `.exe` you save **is** the document.
 
-[![Build](https://github.com/OWNER/REPO/actions/workflows/build.yml/badge.svg)](../../actions/workflows/build.yml)
-[![Release](https://github.com/OWNER/REPO/actions/workflows/release.yml/badge.svg)](../../actions/workflows/release.yml)
+[![Build](https://github.com/Hojjat-Monzavi/PrivEdit/actions/workflows/build.yml/badge.svg?branch=master)](https://github.com/Hojjat-Monzavi/PrivEdit/actions/workflows/build.yml)
+[![Release](https://github.com/Hojjat-Monzavi/PrivEdit/actions/workflows/release.yml/badge.svg)](https://github.com/Hojjat-Monzavi/PrivEdit/actions/workflows/release.yml)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 
 PrivEdit is a Notepad-style editor whose saved files are self-contained
@@ -110,30 +110,42 @@ This build reads v3 only. Convert v1/v2 files once with an older release
   password change.
 
 ---
-
 ## Building
 
-### x64 (MSYS2 MinGW64)
+### x64 — MSYS2 MinGW64 shell
 
 ```bash
-pacman -S --needed mingw-w64-x86_64-{gcc,cmake,ninja,pkgconf,libsodium,zlib}
+pacman -S --needed \
+    mingw-w64-x86_64-gcc \
+    mingw-w64-x86_64-cmake \
+    mingw-w64-x86_64-ninja \
+    mingw-w64-x86_64-pkgconf \
+    mingw-w64-x86_64-libsodium \
+    mingw-w64-x86_64-zlib
 
-cmake -S . -B build -G Ninja \
-      -DCMAKE_BUILD_TYPE=Release \
-      -DCMAKE_TOOLCHAIN_FILE=cmake/mingw64-toolchain.cmake
+cmake -S . -B build -G Ninja -DCMAKE_BUILD_TYPE=Release
 cmake --build build --parallel
 ```
 
-### ARM64 (MSYS2 CLANGARM64)
+### ARM64 — MSYS2 CLANGARM64 shell
 
 ```bash
-pacman -S --needed mingw-w64-clang-aarch64-{clang,cmake,ninja,pkgconf,libsodium,zlib}
+pacman -S --needed \
+    mingw-w64-clang-aarch64-clang \
+    mingw-w64-clang-aarch64-cmake \
+    mingw-w64-clang-aarch64-ninja \
+    mingw-w64-clang-aarch64-pkgconf \
+    mingw-w64-clang-aarch64-libsodium \
+    mingw-w64-clang-aarch64-zlib
 
-cmake -S . -B build -G Ninja \
-      -DCMAKE_BUILD_TYPE=Release \
-      -DCMAKE_TOOLCHAIN_FILE=cmake/clangarm64-toolchain.cmake
+cmake -S . -B build -G Ninja -DCMAKE_BUILD_TYPE=Release
 cmake --build build --parallel
 ```
+
+No toolchain file is required inside MSYS2: the compiler, archiver, resource
+compiler, and pkg-config are all on `PATH`, and CMake discovers them. The
+`cmake/*.cmake` files in this repository are only for cross-compiling from a
+non-MinGW host.
 
 ### Verify the binary is static
 

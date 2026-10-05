@@ -34,10 +34,7 @@ jobs:
             mingw-w64-x86_64-libsodium
             mingw-w64-x86_64-zlib
       - name: Configure
-        run: |
-          cmake -S . -B build -G Ninja \
-                -DCMAKE_BUILD_TYPE=Release \
-                -DCMAKE_TOOLCHAIN_FILE=cmake/mingw64-toolchain.cmake
+        run: cmake -S . -B build -G Ninja -DCMAKE_BUILD_TYPE=Release
       - name: Build
         run: cmake --build build --parallel
       - name: Stage
@@ -69,11 +66,21 @@ jobs:
             mingw-w64-clang-aarch64-pkgconf
             mingw-w64-clang-aarch64-libsodium
             mingw-w64-clang-aarch64-zlib
-      - name: Configure
+      - name: Provide windres for ARM64
         run: |
-          cmake -S . -B build -G Ninja \
-                -DCMAKE_BUILD_TYPE=Release \
-                -DCMAKE_TOOLCHAIN_FILE=cmake/clangarm64-toolchain.cmake
+          set -e
+          if command -v windres >/dev/null 2>&1; then
+            echo "windres found: $(command -v windres)"
+          elif command -v llvm-windres >/dev/null 2>&1; then
+            ln -sf "$(command -v llvm-windres)" /clangarm64/bin/windres.exe
+          elif command -v llvm-rc >/dev/null 2>&1; then
+            ln -sf "$(command -v llvm-rc)" /clangarm64/bin/windres.exe
+          else
+            echo "ERROR: no resource compiler available"
+            exit 1
+          fi
+      - name: Configure
+        run: cmake -S . -B build -G Ninja -DCMAKE_BUILD_TYPE=Release
       - name: Build
         run: cmake --build build --parallel
       - name: Stage

@@ -2,14 +2,14 @@ name: Build
 
 on:
   push:
-    branches: [ main ]
+    branches: [ main, master ]
     paths:
       - 'src/**'
       - 'cmake/**'
       - 'CMakeLists.txt'
       - '.github/workflows/build.yml'
   pull_request:
-    branches: [ main ]
+    branches: [ main, master ]
     paths:
       - 'src/**'
       - 'cmake/**'
@@ -36,6 +36,9 @@ permissions:
 
 jobs:
 
+  # -------------------------------------------------------------------------
+  #  x86_64 -- MSYS2 MINGW64, native GCC toolchain.
+  # -------------------------------------------------------------------------
   build-x64:
     name: x64 (MinGW-w64 / GCC)
     runs-on: windows-latest
@@ -60,23 +63,26 @@ jobs:
             mingw-w64-x86_64-libsodium
             mingw-w64-x86_64-zlib
 
-      - uses: actions/cache@v4
-        with:
-          path: build
-          key: cmake-x64-${{ hashFiles('CMakeLists.txt', 'cmake/mingw64-toolchain.cmake', 'src/**') }}
-          restore-keys: cmake-x64-
-
       - name: Configure
         run: |
           cmake -S . -B build -G Ninja \
-                -DCMAKE_BUILD_TYPE=${{ github.event.inputs.build_type || 'Release' }} \
-                -DCMAKE_TOOLCHAIN_FILE=cmake/mingw64-toolchain.cmake
+                -DCMAKE_BUILD_TYPE=${{ github.event.inputs.build_type || 'Release' }}
 
       - name: Build
         run: cmake --build build --parallel
 
       - name: Verify import table
-        run: objdump -p build/privedit_gui.exe | grep "DLL Name"
+        run: |
+          set -e
+          OBJDUMP="$(command -v llvm-objdump || command -v objdump)"
+          echo "Using: $OBJDUMP"
+          echo "--- Import table ---"
+          "$OBJDUMP" -p build/privedit_gui.exe | grep -i "dll name" || true
+          if "$OBJDUMP" -p build/privedit_gui.exe | grep -iE "libsodium|libcrypto|zlib1|libgcc|libstdc"; then
+            echo "ERROR: found non-system DLL dependency"
+            exit 1
+          fi
+          echo "OK: only Windows system DLLs are referenced"
 
       - uses: actions/upload-artifact@v4
         with:
@@ -85,6 +91,9 @@ jobs:
           if-no-files-found: error
           compression-level: 9
 
+  # -------------------------------------------------------------------------
+  #  ARM64 -- MSYS2 CLANGARM64, native Clang toolchain.
+  # -------------------------------------------------------------------------
   build-arm64:
     name: ARM64 (Clang / CLANGARM64)
     runs-on: windows-11-arm
@@ -109,23 +118,46 @@ jobs:
             mingw-w64-clang-aarch64-libsodium
             mingw-w64-clang-aarch64-zlib
 
-      - uses: actions/cache@v4
-        with:
-          path: build
-          key: cmake-arm64-${{ hashFiles('CMakeLists.txt', 'cmake/clangarm64-toolchain.cmake', 'src/**') }}
-          restore-keys: cmake-arm64-
+      # CLANGARM64 ships LLVM tools, not GNU binutils. Provide a windres
+      # shim so CMake's RC step works. Prefer llvm-windres if present,
+      # else fall back to llvm-rc (which enters windres-compatible mode
+      # when invoked as `windres`).
+      - name: Provide windres for ARM64
+        run: |
+          set -e
+          if command -v windres >/dev/null 2>&1; then
+            echo "windres found: $(command -v windres)"
+          elif command -v llvm-windres >/dev/null 2>&1; then
+            ln -sf "$(command -v llvm-windres)" /clangarm64/bin/windres.exe
+            echo "Linked windres -> llvm-windres"
+          elif command -v llvm-rc >/dev/null 2>&1; then
+            ln -sf "$(command -v llvm-rc)" /clangarm64/bin/windres.exe
+            echo "Linked windres -> llvm-rc (windres compat mode)"
+          else
+            echo "ERROR: no resource compiler available in CLANGARM64"
+            exit 1
+          fi
 
       - name: Configure
         run: |
           cmake -S . -B build -G Ninja \
-                -DCMAKE_BUILD_TYPE=${{ github.event.inputs.build_type || 'Release' }} \
-                -DCMAKE_TOOLCHAIN_FILE=cmake/clangarm64-toolchain.cmake
+                -DCMAKE_BUILD_TYPE=${{ github.event.inputs.build_type || 'Release' }}
 
       - name: Build
         run: cmake --build build --parallel
 
       - name: Verify import table
-        run: objdump -p build/privedit_gui.exe | grep "DLL Name"
+        run: |
+          set -e
+          OBJDUMP="$(command -v llvm-objdump || command -v objdump)"
+          echo "Using: $OBJDUMP"
+          echo "--- Import table ---"
+          "$OBJDUMP" -p build/privedit_gui.exe | grep -i "dll name" || true
+          if "$OBJDUMP" -p build/privedit_gui.exe | grep -iE "libsodium|libcrypto|zlib1|libgcc|libstdc"; then
+            echo "ERROR: found non-system DLL dependency"
+            exit 1
+          fi
+          echo "OK: only Windows system DLLs are referenced"
 
       - uses: actions/upload-artifact@v4
         with:

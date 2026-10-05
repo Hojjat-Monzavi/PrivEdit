@@ -1,42 +1,28 @@
-# MSYS2 CLANGARM64 toolchain for native ARM64 Windows builds.
+# ===========================================================================
+#  Cross-compile toolchain: aarch64-w64-mingw32 via LLVM-MinGW
 #
-# Usage (inside the MSYS2 CLANGARM64 shell):
+#  DO NOT pass this file when building inside the MSYS2 CLANGARM64 shell.
+#  In that environment CMake auto-detects clang, llvm-ar, llvm-ranlib,
+#  llvm-strip, windres, and pkg-config from PATH:
 #
-#   cmake -S . -B build -G Ninja \
-#         -DCMAKE_BUILD_TYPE=Release \
-#         -DCMAKE_TOOLCHAIN_FILE=cmake/clangarm64-toolchain.cmake
+#      cmake -S . -B build -G Ninja -DCMAKE_BUILD_TYPE=Release
+#
+#  Use this file only with an external LLVM-MinGW installation, e.g. the
+#  release from https://github.com/mstorsjo/llvm-mingw. Build libsodium
+#  and zlib for aarch64-w64-mingw32 first, then point PKG_CONFIG_PATH at
+#  their .pc files.
+# ===========================================================================
 
 set(CMAKE_SYSTEM_NAME      Windows)
 set(CMAKE_SYSTEM_PROCESSOR aarch64)
 
-set(CMAKE_C_COMPILER   clang)
-set(CMAKE_CXX_COMPILER clang++)
-set(CMAKE_RC_COMPILER  windres)
+# Adjust if your LLVM-MinGW prefix differs.
+set(CMAKE_C_COMPILER   aarch64-w64-mingw32-clang)
+set(CMAKE_CXX_COMPILER aarch64-w64-mingw32-clang++)
+set(CMAKE_RC_COMPILER  aarch64-w64-mingw32-windres)
 set(CMAKE_AR           llvm-ar)
 set(CMAKE_RANLIB       llvm-ranlib)
 set(CMAKE_STRIP        llvm-strip)
 
-if(NOT DEFINED CLANGARM64_ROOT)
-    if(EXISTS "C:/msys64/clangarm64")
-        set(CLANGARM64_ROOT "C:/msys64/clangarm64" CACHE PATH "CLANGARM64 root")
-    elseif(EXISTS "/clangarm64")
-        set(CLANGARM64_ROOT "/clangarm64" CACHE PATH "CLANGARM64 root")
-    else()
-        message(FATAL_ERROR
-            "Could not locate the MSYS2 CLANGARM64 prefix. "
-            "Pass -DCLANGARM64_ROOT=<path> or run inside the CLANGARM64 shell.")
-    endif()
-endif()
-
-set(CMAKE_FIND_ROOT_PATH "${CLANGARM64_ROOT}")
-set(CMAKE_FIND_ROOT_PATH_MODE_PROGRAM NEVER)
-set(CMAKE_FIND_ROOT_PATH_MODE_LIBRARY ONLY)
-set(CMAKE_FIND_ROOT_PATH_MODE_INCLUDE ONLY)
-set(CMAKE_FIND_ROOT_PATH_MODE_PACKAGE ONLY)
-
-set(CMAKE_FIND_LIBRARY_PREFIXES "lib")
-set(CMAKE_FIND_LIBRARY_SUFFIXES ".a" ".dll.a")
-
-set(ENV{PKG_CONFIG_PATH} "${CLANGARM64_ROOT}/lib/pkgconfig")
-
-set(CMAKE_TRY_COMPILE_TARGET_TYPE STATIC_LIBRARY)
+# Point pkg-config at the cross-built .pc files.
+set(ENV{PKG_CONFIG_PATH} "$ENV{PKG_CONFIG_PATH}:/opt/llvm-mingw/aarch64/lib/pkgconfig")
