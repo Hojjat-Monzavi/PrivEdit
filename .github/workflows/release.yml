@@ -1,0 +1,115 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: false
+
+permissions:
+  contents: write
+
+jobs:
+
+  build-x64:
+    name: x64
+    runs-on: windows-latest
+    defaults:
+      run:
+        shell: msys2 {0}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: msys2/setup-msys2@v2
+        with:
+          msystem: MINGW64
+          update: false
+          install: >-
+            mingw-w64-x86_64-gcc
+            mingw-w64-x86_64-cmake
+            mingw-w64-x86_64-ninja
+            mingw-w64-x86_64-pkgconf
+            mingw-w64-x86_64-libsodium
+            mingw-w64-x86_64-zlib
+      - name: Configure
+        run: |
+          cmake -S . -B build -G Ninja \
+                -DCMAKE_BUILD_TYPE=Release \
+                -DCMAKE_TOOLCHAIN_FILE=cmake/mingw64-toolchain.cmake
+      - name: Build
+        run: cmake --build build --parallel
+      - name: Stage
+        run: |
+          mkdir -p staging
+          cp build/privedit_gui.exe staging/privedit_gui-x64.exe
+      - uses: actions/upload-artifact@v4
+        with:
+          name: release-x64
+          path: staging/privedit_gui-x64.exe
+          if-no-files-found: error
+
+  build-arm64:
+    name: ARM64
+    runs-on: windows-11-arm
+    defaults:
+      run:
+        shell: msys2 {0}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: msys2/setup-msys2@v2
+        with:
+          msystem: CLANGARM64
+          update: false
+          install: >-
+            mingw-w64-clang-aarch64-clang
+            mingw-w64-clang-aarch64-cmake
+            mingw-w64-clang-aarch64-ninja
+            mingw-w64-clang-aarch64-pkgconf
+            mingw-w64-clang-aarch64-libsodium
+            mingw-w64-clang-aarch64-zlib
+      - name: Configure
+        run: |
+          cmake -S . -B build -G Ninja \
+                -DCMAKE_BUILD_TYPE=Release \
+                -DCMAKE_TOOLCHAIN_FILE=cmake/clangarm64-toolchain.cmake
+      - name: Build
+        run: cmake --build build --parallel
+      - name: Stage
+        run: |
+          mkdir -p staging
+          cp build/privedit_gui.exe staging/privedit_gui-arm64.exe
+      - uses: actions/upload-artifact@v4
+        with:
+          name: release-arm64
+          path: staging/privedit_gui-arm64.exe
+          if-no-files-found: error
+
+  publish:
+    name: Publish Release
+    needs: [ build-x64, build-arm64 ]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          path: artifacts
+      - name: Flatten
+        run: |
+          mkdir -p dist
+          find artifacts -name '*.exe' -exec cp {} dist/ \;
+          ls -la dist
+      - name: Checksums
+        run: |
+          cd dist
+          sha256sum *.exe > SHA256SUMS.txt
+          cat SHA256SUMS.txt
+      - uses: softprops/action-gh-release@v2
+        with:
+          name: ${{ github.ref_name }}
+          generate_release_notes: true
+          fail_on_unmatched_files: true
+          files: |
+            dist/privedit_gui-x64.exe
+            dist/privedit_gui-arm64.exe
+            dist/SHA256SUMS.txt

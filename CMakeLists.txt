@@ -114,10 +114,15 @@ target_compile_options(privedit_gui PRIVATE
 target_link_options(privedit_gui PRIVATE
     -municode
     -static
-    -static-libgcc
-    -static-libstdc++
     $<$<BOOL:${PRIVEDIT_LTO}>:-flto>
 )
+
+if(CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
+    target_link_options(privedit_gui PRIVATE
+        -static-libgcc
+        -static-libstdc++
+    )
+endif()
 
 if(PRIVEDIT_HARDENING)
     target_link_options(privedit_gui PRIVATE

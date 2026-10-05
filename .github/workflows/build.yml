@@ -1,0 +1,135 @@
+name: Build
+
+on:
+  push:
+    branches: [ main ]
+    paths:
+      - 'src/**'
+      - 'cmake/**'
+      - 'CMakeLists.txt'
+      - '.github/workflows/build.yml'
+  pull_request:
+    branches: [ main ]
+    paths:
+      - 'src/**'
+      - 'cmake/**'
+      - 'CMakeLists.txt'
+      - '.github/workflows/build.yml'
+  workflow_dispatch:
+    inputs:
+      build_type:
+        description: 'CMake build type'
+        required: false
+        default: 'Release'
+        type: choice
+        options:
+          - Release
+          - RelWithDebInfo
+          - Debug
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+
+  build-x64:
+    name: x64 (MinGW-w64 / GCC)
+    runs-on: windows-latest
+    if: >
+      github.event_name != 'pull_request' ||
+      github.event.pull_request.draft == false
+    defaults:
+      run:
+        shell: msys2 {0}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: msys2/setup-msys2@v2
+        with:
+          msystem: MINGW64
+          update: false
+          install: >-
+            mingw-w64-x86_64-gcc
+            mingw-w64-x86_64-cmake
+            mingw-w64-x86_64-ninja
+            mingw-w64-x86_64-pkgconf
+            mingw-w64-x86_64-libsodium
+            mingw-w64-x86_64-zlib
+
+      - uses: actions/cache@v4
+        with:
+          path: build
+          key: cmake-x64-${{ hashFiles('CMakeLists.txt', 'cmake/mingw64-toolchain.cmake', 'src/**') }}
+          restore-keys: cmake-x64-
+
+      - name: Configure
+        run: |
+          cmake -S . -B build -G Ninja \
+                -DCMAKE_BUILD_TYPE=${{ github.event.inputs.build_type || 'Release' }} \
+                -DCMAKE_TOOLCHAIN_FILE=cmake/mingw64-toolchain.cmake
+
+      - name: Build
+        run: cmake --build build --parallel
+
+      - name: Verify import table
+        run: objdump -p build/privedit_gui.exe | grep "DLL Name"
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: privedit-gui-x64
+          path: build/privedit_gui.exe
+          if-no-files-found: error
+          compression-level: 9
+
+  build-arm64:
+    name: ARM64 (Clang / CLANGARM64)
+    runs-on: windows-11-arm
+    if: >
+      github.event_name != 'pull_request' ||
+      github.event.pull_request.draft == false
+    defaults:
+      run:
+        shell: msys2 {0}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: msys2/setup-msys2@v2
+        with:
+          msystem: CLANGARM64
+          update: false
+          install: >-
+            mingw-w64-clang-aarch64-clang
+            mingw-w64-clang-aarch64-cmake
+            mingw-w64-clang-aarch64-ninja
+            mingw-w64-clang-aarch64-pkgconf
+            mingw-w64-clang-aarch64-libsodium
+            mingw-w64-clang-aarch64-zlib
+
+      - uses: actions/cache@v4
+        with:
+          path: build
+          key: cmake-arm64-${{ hashFiles('CMakeLists.txt', 'cmake/clangarm64-toolchain.cmake', 'src/**') }}
+          restore-keys: cmake-arm64-
+
+      - name: Configure
+        run: |
+          cmake -S . -B build -G Ninja \
+                -DCMAKE_BUILD_TYPE=${{ github.event.inputs.build_type || 'Release' }} \
+                -DCMAKE_TOOLCHAIN_FILE=cmake/clangarm64-toolchain.cmake
+
+      - name: Build
+        run: cmake --build build --parallel
+
+      - name: Verify import table
+        run: objdump -p build/privedit_gui.exe | grep "DLL Name"
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: privedit-gui-arm64
+          path: build/privedit_gui.exe
+          if-no-files-found: error
+          compression-level: 9
